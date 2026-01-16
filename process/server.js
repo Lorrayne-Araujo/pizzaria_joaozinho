@@ -202,6 +202,51 @@ app.post('/api/pedidos', async (req, res) => {
       res.status(500).json({ error: 'Erro ao buscar pedidos' });
     }
   });
+
+  // DELETE api/pedidos 
+app.delete('/api/pedidos/:id', async (req, res) => {
+  const pedidoId = parseInt(req.params.id);
+
+  if (isNaN(pedidoId)) {
+    return res.status(400).json({ error: 'ID inválido' });
+  }
+
+  const transaction = new sql.Transaction(pool);
+
+  try {
+    await transaction.begin();
+
+    const request = new sql.Request(transaction);
+    request.input('pedidoId', sql.Int, pedidoId);
+
+    const result = await request.query(`
+      DELETE FROM pedidos WHERE id = @pedidoId
+    `);
+
+    await request.query(`
+      DELETE FROM pizza_sabor 
+      WHERE pizzas_id NOT IN (SELECT pizzas_id FROM pedidos)
+    `);
+
+    await request.query(`
+      DELETE FROM pizzas 
+      WHERE id NOT IN (SELECT pizzas_id FROM pedidos)
+    `);
+
+    if (result.rowsAffected[0] === 0) {
+      throw new Error('Pedido não encontrado');
+    }
+
+    await transaction.commit();
+
+    res.status(204).send();
+
+  } catch (error) {
+    await transaction.rollback();
+    console.error('ERRO REAL:', error); // 👈 ESSENCIAL
+    res.status(500).json({ error: 'Erro ao deletar pedido' });
+  }
+});
 // FIM DO ORDERS.JS
 
 async function start() {

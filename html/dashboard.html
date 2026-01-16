@@ -75,71 +75,108 @@
             document.getElementById('footer').innerHTML = '<p>Erro ao carregar o rodapé.</p>';
         });
 
-    async function carregarPedidos() {
-        try {
-            const response = await fetch('http://localhost:3000/api/pedidos');
+        async function carregarPedidos() {
+            try {
+                const response = await fetch('http://localhost:3000/api/pedidos');
 
-            if (!response.ok) {
-                throw new Error('Erro ao buscar pedidos');
-            }
+                if (!response.ok) {
+                    throw new Error('Erro ao buscar pedidos');
+                }
 
-            const pedidos = await response.json();
-            const tbody = document.querySelector('table tbody');
+                const pedidos = await response.json();
+                const tbody = document.querySelector('table tbody');
 
-            // limpa a tabela antes de renderizar
-            tbody.innerHTML = '';
+                // limpa a tabela antes de renderizar
+                tbody.innerHTML = '';
 
-            const statusMap = {
-                1: 'em produção',
-                2: 'em entrega',
-                3: 'concluído'
-            };
+                const statusMap = {
+                    1: 'em produção',
+                    2: 'em entrega',
+                    3: 'concluído'
+                };
 
-            pedidos.forEach(pedido => {
-                const tr = document.createElement('tr');
+                pedidos.forEach(pedido => {
+                    const tr = document.createElement('tr');
 
-                tr.innerHTML = `
-                    <td>#${pedido.id}</td>
-                    <td>${pedido.borda}</td>
-                    <td>${pedido.massa}</td>
-                    <td>${pedido.sabores.join(', ')}</td>
-                    <td>
-                        <form action="process/order.js"  class="form-group update-form" method="post">
-                            <input type="hidden" name="type" value="update">
-                            <input type="hidden" name="id" value="${pedido.id}">
-                            <select name="status" class="form-control status-input" data-id="${pedido.id}">
-                                <option value="1" ${pedido.status == 1 ? 'selected' : ''}>Em produção</option>
-                                <option value="2" ${pedido.status == 2 ? 'selected' : ''}>Em entrega</option>
-                                <option value="3" ${pedido.status == 3 ? 'selected' : ''}>Concluído</option>
-                            </select>
-                            <button type="submit" class="update-btn">
-                                <i class="fas fa-sync-alt"></i>
-                            </button>
-                        </form>
-                    </td>
-                    <td>
-                        <form action="process/orders.js" method="post">
-                            <input type="hidden" name="type" value="delete">
-                            <input type="hidden" name="id" value="${pedido.id}">
+                    tr.innerHTML = `
+                        <td>#${pedido.id}</td>
+                        <td>${pedido.borda}</td>
+                        <td>${pedido.massa}</td>
+                        <td>${pedido.sabores.join(', ')}</td>
+                        <td>
+                            <form action="process/order.js"  class="form-group update-form" method="post">
+                                <input type="hidden" name="type" value="update">
+                                <input type="hidden" name="id" value="${pedido.id}">
+                                <select name="status" class="form-control status-input" data-id="${pedido.id}">
+                                    <option value="1" ${pedido.status == 1 ? 'selected' : ''}>Em produção</option>
+                                    <option value="2" ${pedido.status == 2 ? 'selected' : ''}>Em entrega</option>
+                                    <option value="3" ${pedido.status == 3 ? 'selected' : ''}>Concluído</option>
+                                </select>
+                                <button type="submit" class="update-btn">
+                                    <i class="fas fa-sync-alt"></i>
+                                </button>
+                            </form>
+                        </td>
+                        <td>
                             <button class="delete-btn" data-id="${pedido.id}">
                                 <i class="fas fa-times"></i>
-                            </button>
-                        </form>
-                    </td>
-                `;
+                             </button>
+                        </td>
+                    `;
 
-                tbody.appendChild(tr);
-            });
+                    tbody.appendChild(tr);
+                });
 
-            console.log('✓ Pedidos carregados:', pedidos);
+                console.log('✓ Pedidos carregados:', pedidos);
 
-        } catch (error) {
-            console.error('Erro ao carregar pedidos:', error);
+            } catch (error) {
+                console.error('Erro ao carregar pedidos:', error);
+            }
         }
-    }
+
+        document.addEventListener('click', function (event) {
+            const btn = event.target.closest('.delete-btn');
+
+            if (!btn) return;
+
+            const id = btn.dataset.id;
+
+            if (confirm('Tem certeza que deseja deletar este pedido?')) {
+                deletarPedido(id);
+            }
+        });
+
+        async function deletarPedido(id) {
+            try {
+                const messageDiv = document.getElementById('message');
+                const response = await fetch('http://localhost:3000/api/pedidos/' + id, {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) {
+                    throw new Error('Erro ao deletar pedido');
+                }
+
+                messageDiv.className = 'alert alert-success';
+                messageDiv.innerHTML = `
+                    Pedido removido com sucesso!
+                `;
+                setTimeout(() => { if (messageDiv) {
+                    messageDiv.innerHTML = '';
+                    messageDiv.className = '';
+                }  }, 4000);
+                
+                carregarPedidos(); // Recarrega a lista de pedidos após a exclusão
+
+            } catch (error) {
+                console.error('Erro ao deletar pedido:', error);
+            }
+        }
 
     // chama automaticamente quando a página abrir
-    window.addEventListener('DOMContentLoaded', carregarPedidos);
+    window.addEventListener('DOMContentLoaded', 
+        carregarPedidos
+    );
 
     </script>
     <div id="footer"></div>
