@@ -38,6 +38,8 @@ async function connectDB() {
   }
 }
 
+// PARA MELHOR ORGANIZAÇÃO, PASSAR FUTURAMENTE PARA O PIZZA.JS
+
 // GET /api/sabores
 app.get('/api/sabores', async (req, res) => {
   try {
@@ -150,6 +152,58 @@ app.post('/api/pedidos', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// FIM DO PIZZA.JS
+
+// PARA MELHOR ORGANIZAÇÃO, PASSAR FUTURAMENTE PARA O ORDERS.JS
+
+// GET/api/PEDIDOS
+  app.get('/api/pedidos', async (req, res) => {
+    try {
+      const result = await pool.request().query(`
+        SELECT 
+          p.id AS pedido_id,
+          p.status_id,
+          b.tipo AS borda,
+          m.tipo AS massa,
+          s.tipo AS sabor
+        FROM pedidos p
+        JOIN pizzas pi ON pi.id = p.pizzas_id
+        JOIN bordas b ON b.id = pi.bordas_id
+        JOIN massas m ON m.id = pi.massas_id
+        JOIN pizza_sabor ps ON ps.pizzas_id = pi.id
+        JOIN sabores s ON s.id = ps.sabores_id
+        ORDER BY p.id
+      `);
+
+      const pedidosMap = {};
+
+      result.recordset.forEach(row => {
+        if (!pedidosMap[row.pedido_id]) {
+          pedidosMap[row.pedido_id] = {
+            id: row.pedido_id,
+            borda: row.borda,
+            massa: row.massa,
+            status: row.status_id, // depois você pode mapear para texto
+            sabores: []
+          };
+        }
+
+        pedidosMap[row.pedido_id].sabores.push(row.sabor);
+      });
+
+      const pedidos = Object.values(pedidosMap);
+
+      console.log('✓ Pedidos formatados:', pedidos);
+      res.json(pedidos);
+
+    } catch (error) {
+      console.error('✗ Erro GET /api/pedidos:', error.message);
+      res.status(500).json({ error: 'Erro ao buscar pedidos' });
+    }
+  });
+// FIM DO ORDERS.JS
+
 async function start() {
   await connectDB();
   app.listen(port, '127.0.0.1', () => {
