@@ -144,7 +144,94 @@
             carregarSabores();
             carregarBordas();
             carregarMassas();
+
+            if (window.innerWidth > 425) return;
+
+            ativarSelectMobileQuandoTiverOpcoes('borda', 'Selecione a borda');
+            ativarSelectMobileQuandoTiverOpcoes('massa', 'Selecione a massa');
+
         });
+
+        function ativarSelectMobileQuandoTiverOpcoes(selectId, placeholder) {
+            const select = document.getElementById(selectId);
+            if (!select) return;
+
+            const observer = new MutationObserver(() => {
+                if (select.options.length > 1) {
+                observer.disconnect();
+                criarSelectMobile(selectId, placeholder);
+                }
+            });
+
+            observer.observe(select, { childList: true });
+        }
+
+        function criarSelectMobile(selectId, placeholder) {
+            const select = document.getElementById(selectId);
+            if (!select) return;
+
+            // evita duplicar se recarregar ou rodar duas vezes
+            if (select.dataset.mobileCreated === 'true') return;
+                select.dataset.mobileCreated = 'true';
+
+                // esconder select original só no mobile
+                select.classList.add('mobile-hide');
+
+                const wrapper = document.createElement('div');
+                wrapper.className = 'mobile-select-wrapper';
+
+                const btn = document.createElement('div');
+                btn.className = 'mobile-select-btn';
+                btn.textContent = placeholder;
+
+                const list = document.createElement('div');
+                list.className = 'mobile-select-list';
+
+                // cria a lista baseado nas options do select
+                [...select.options].forEach(opt => {
+                    if (!opt.value) return;
+
+                    const item = document.createElement('div');
+                    item.className = 'mobile-select-item';
+                    item.textContent = opt.textContent;
+
+                    item.addEventListener('click', () => {
+                    select.value = opt.value;
+                    btn.textContent = opt.textContent;
+
+                    // dispara evento change (se seu código usa)
+                    select.dispatchEvent(new Event('change'));
+
+                    list.style.display = 'none';
+                    });
+
+                    list.appendChild(item);
+                });
+
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    // fecha outros abertos
+                    document.querySelectorAll('.mobile-select-list').forEach(l => {
+                    if (l !== list) l.style.display = 'none';
+                    });
+
+                    list.style.display = list.style.display === 'block' ? 'none' : 'block';
+                });
+
+                wrapper.appendChild(btn);
+                wrapper.appendChild(list);
+
+                // coloca o select custom antes do select original
+                select.parentNode.insertBefore(wrapper, select);
+
+                // se já tiver value selecionado (ex: editando), mostra no botão
+                if (select.value) {
+                    const selectedOption = select.options[select.selectedIndex];
+                    if (selectedOption && selectedOption.value) {
+                    btn.textContent = selectedOption.textContent;
+                    }
+                }
+            }
 
         const saboresSelect = document.getElementById('sabores');
 
