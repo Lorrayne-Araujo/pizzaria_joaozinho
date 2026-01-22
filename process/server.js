@@ -274,6 +274,7 @@ app.post('/api/pedidos', async (req, res) => {
 
       res.json({ message: 'Status do pedido atualizado com sucesso' });
 
+      
     } catch (error) {
       console.error('✗ Erro UPDATE /api/pedidos/:id:', error.message);
       res.status(500).json({ error: 'Erro ao atualizar status do pedido' });
