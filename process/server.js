@@ -204,49 +204,81 @@ app.post('/api/pedidos', async (req, res) => {
   });
 
   // DELETE api/pedidos 
-app.delete('/api/pedidos/:id', async (req, res) => {
-  const pedidoId = parseInt(req.params.id);
+  app.delete('/api/pedidos/:id', async (req, res) => {
+    const pedidoId = parseInt(req.params.id);
 
-  if (isNaN(pedidoId)) {
-    return res.status(400).json({ error: 'ID inválido' });
-  }
-
-  const transaction = new sql.Transaction(pool);
-
-  try {
-    await transaction.begin();
-
-    const request = new sql.Request(transaction);
-    request.input('pedidoId', sql.Int, pedidoId);
-
-    const result = await request.query(`
-      DELETE FROM pedidos WHERE id = @pedidoId
-    `);
-
-    await request.query(`
-      DELETE FROM pizza_sabor 
-      WHERE pizzas_id NOT IN (SELECT pizzas_id FROM pedidos)
-    `);
-
-    await request.query(`
-      DELETE FROM pizzas 
-      WHERE id NOT IN (SELECT pizzas_id FROM pedidos)
-    `);
-
-    if (result.rowsAffected[0] === 0) {
-      throw new Error('Pedido não encontrado');
+    if (isNaN(pedidoId)) {
+      return res.status(400).json({ error: 'ID inválido' });
     }
 
-    await transaction.commit();
+    const transaction = new sql.Transaction(pool);
 
-    res.status(204).send();
+    try {
+      await transaction.begin();
 
-  } catch (error) {
-    await transaction.rollback();
-    console.error('ERRO REAL:', error); // 👈 ESSENCIAL
-    res.status(500).json({ error: 'Erro ao deletar pedido' });
-  }
-});
+      const request = new sql.Request(transaction);
+      request.input('pedidoId', sql.Int, pedidoId);
+
+      const result = await request.query(`
+        DELETE FROM pedidos WHERE id = @pedidoId
+      `);
+
+      await request.query(`
+        DELETE FROM pizza_sabor 
+        WHERE pizzas_id NOT IN (SELECT pizzas_id FROM pedidos)
+      `);
+
+      await request.query(`
+        DELETE FROM pizzas 
+        WHERE id NOT IN (SELECT pizzas_id FROM pedidos)
+      `);
+
+      if (result.rowsAffected[0] === 0) {
+        throw new Error('Pedido não encontrado');
+      }
+
+      await transaction.commit();
+
+      res.status(204).send();
+
+    } catch (error) {
+      await transaction.rollback();
+      console.error('ERRO REAL:', error); // 👈 ESSENCIAL
+      res.status(500).json({ error: 'Erro ao deletar pedido' });
+    }
+  });
+
+  // UPDATE api/pedidos/:id
+  app.put('/api/pedidos/:id', async (req, res) => {
+    const pedidoId = parseInt(req.params.id);
+    const { status_id } = req.body;
+
+    if (isNaN(pedidoId) || typeof status_id !== 'number') {
+      return res.status(400).json({ error: 'ID inválido ou status_id ausente' });
+    }
+
+    try {
+      const request = pool.request();
+      request.input('pedidoId', sql.Int, pedidoId);
+      request.input('statusId', sql.Int, status_id);
+      
+      const result = await request.query(`
+        UPDATE pedidos 
+        SET status_id = @statusId 
+        WHERE id = @pedidoId
+      `);
+
+      if (result.rowsAffected[0] === 0) {
+        return res.status(404).json({ error: 'Pedido não encontrado' });
+      }
+
+      res.json({ message: 'Status do pedido atualizado com sucesso' });
+
+    } catch (error) {
+      console.error('✗ Erro UPDATE /api/pedidos/:id:', error.message);
+      res.status(500).json({ error: 'Erro ao atualizar status do pedido' });
+    }
+  }); 
 // FIM DO ORDERS.JS
 
 async function start() {
